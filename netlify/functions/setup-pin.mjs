@@ -16,7 +16,10 @@ export default async (req) => {
     const expectedSecret = process.env.PIN_SETUP_SECRET;
 
     if (!expectedSecret || typeof setupSecret !== "string") {
-      return Response.json({ error: "Not authorised." }, { status: 401 });
+      return Response.json(
+        { error: "Not authorised." },
+        { status: 401 }
+      );
     }
 
     const supplied = Buffer.from(setupSecret);
@@ -26,7 +29,10 @@ export default async (req) => {
       supplied.length !== expected.length ||
       !timingSafeEqual(supplied, expected)
     ) {
-      return Response.json({ error: "Not authorised." }, { status: 401 });
+      return Response.json(
+        { error: "Not authorised." },
+        { status: 401 }
+      );
     }
 
     if (
@@ -34,7 +40,10 @@ export default async (req) => {
       typeof pin !== "string" ||
       !/^\d{8,12}$/.test(pin)
     ) {
-      return Response.json({ error: "Invalid player or PIN." }, { status: 400 });
+      return Response.json(
+        { error: "Invalid player or PIN." },
+        { status: 400 }
+      );
     }
 
     const salt = randomBytes(16).toString("hex");
@@ -44,33 +53,48 @@ export default async (req) => {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const response = await fetch(
-    `${url.replace(/\/+$/, "")}/rest/v1/players?id=eq.${encodeURIComponent(playerId)}`,      {
+    if (!url || !key) {
+      throw new Error("Missing Supabase environment variables.");
+    }
+
+    const response = await fetch(
+      `${url.replace(/\/+$/, "")}/rest/v1/players?id=eq.${encodeURIComponent(playerId)}`,
+      {
         method: "PATCH",
         headers: {
           apikey: key,
           Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
-          Prefer: "return=minimal"
+          Prefer: "return=representation"
         },
         body: JSON.stringify({ pin_hash: pinHash })
       }
     );
 
     if (!response.ok) {
-    const errorText = await response.text();
-    console.error(
+      const errorText = await response.text();
+      console.error(
         "Supabase update failed:",
         response.status,
         errorText
-    );
-    throw new Error("Database update failed.");
-}
+      );
+      throw new Error("Database update failed.");
+    }
+
+    const updatedRows = await response.json();
+
+    if (updatedRows.length !== 1) {
+      throw new Error("Player record was not updated.");
+    }
 
     return Response.json({ success: true });
+
   } catch (error) {
     console.error("PIN setup error:", error.message);
-    return Response.json({ error: "PIN setup failed." }, { status: 500 });
+
+    return Response.json(
+      { error: "PIN setup failed." },
+      { status: 500 }
+    );
   }
 };
-	
