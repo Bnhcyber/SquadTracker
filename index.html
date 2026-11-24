@@ -1,0 +1,130 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Squad Tracker</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 30px;
+      background: #10131c;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    h1 { color: #65e6d0; }
+    .players {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
+      gap: 15px;
+    }
+    .player {
+      background: #202738;
+      padding: 22px;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 1px solid #39465d;
+    }
+    .player:hover { border-color: #65e6d0; }
+    .panel {
+      margin-top: 25px;
+      background: #202738;
+      padding: 20px;
+      border-radius: 12px;
+    }
+    button {
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .muted { color: #aab5c8; }
+  </style>
+</head>
+<body>
+  <h1>⚡ SQUAD TRACKER</h1>
+  <p class="muted">Your squad. Your collection. One leaderboard.</p>
+
+  <h2>Choose a player</h2>
+  <div class="players" id="players"></div>
+
+  <div class="panel" id="panel">
+    <h2>Squad collections</h2>
+    <p class="muted">Select a player to view their profile.</p>
+  </div>
+
+  
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const supabase = createClient(
+  'https://ueyahcmuewfuycewojcg.supabase.co',
+  'sb_publishable_1UKEkPJW-BhAjj_8xoSlBg_C7GRYdpp'
+);
+
+const players = [
+  {id:"bharanyu",name:"Bharanyu"},
+  {id:"abrar",name:"Abrar"},
+  {id:"mahad",name:"Mahad"},
+  {id:"usman",name:"Usman"}
+];
+
+const container = document.getElementById("players");
+const panel = document.getElementById("panel");
+
+players.forEach(player => {
+  const card = document.createElement("div");
+  card.className = "player";
+  card.innerHTML = `<h2>${player.name}</h2><p>View collection →</p>`;
+  card.onclick = () => showPlayer(player);
+  container.appendChild(card);
+});
+
+async function showPlayer(player) {
+  panel.innerHTML = `<h2>${player.name}'s Collection</h2><p>Loading sprites...</p>`;
+
+  const {data, error} = await supabase
+    .from('sprites')
+    .select('*')
+    .order('name');
+
+  if (error) {
+    panel.textContent = error.message;
+    return;
+  }
+
+  const {data: ownership, error: ownershipError} = await supabase
+    .from('sprite_ownership')
+    .select('sprite_id, owned')
+    .eq('player_id', player.id);
+
+  if (ownershipError) {
+    panel.textContent = ownershipError.message;
+    return;
+  }
+
+  const ownedIds = new Set(
+    ownership.filter(x => x.owned).map(x => x.sprite_id)
+  );
+
+  panel.innerHTML = `
+    <h2>${player.name}'s Collection</h2>
+    <h3>${ownedIds.size} / ${data.length} owned</h3>
+    <div id="sprite-list"></div>
+  `;
+
+  const list = document.getElementById('sprite-list');
+
+  data.forEach(sprite => {
+    const item = document.createElement('p');
+    item.textContent =
+      `${ownedIds.has(sprite.id) ? '✅' : '⬜'} ${sprite.name} — ${sprite.variant}`;
+    list.appendChild(item);
+  });
+}
+</script>
+
+</body>
+</html>
