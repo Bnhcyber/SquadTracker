@@ -44,9 +44,8 @@ export default async (req) => {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const response = await fetch(
-      `${url}/rest/v1/players?id=eq.${playerId}`,
-      {
+const response = await fetch(
+    `${url.replace(/\/+$/, "")}/rest/v1/players?id=eq.${encodeURIComponent(playerId)}`,      {
         method: "PATCH",
         headers: {
           apikey: key,
