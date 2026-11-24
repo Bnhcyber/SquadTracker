@@ -58,7 +58,15 @@ export default async (req) => {
       }
     );
 
-    if (!response.ok) throw new Error("Database update failed.");
+    if (!response.ok) {
+    const errorText = await response.text();
+    console.error(
+        "Supabase update failed:",
+        response.status,
+        errorText
+    );
+    throw new Error("Database update failed.");
+}
 
     return Response.json({ success: true });
   } catch (error) {
@@ -66,3 +74,4 @@ export default async (req) => {
     return Response.json({ error: "PIN setup failed." }, { status: 500 });
   }
 };
+	
